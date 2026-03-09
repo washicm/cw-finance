@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AppSidebar } from '@/components/app-sidebar'
 import { formatCurrency } from '@/lib/currency'
@@ -17,6 +18,10 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (!user) {
+    redirect('/login')
+  }
+
   const today = new Date()
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
     .toISOString()
@@ -25,13 +30,17 @@ export default async function DashboardPage() {
     .toISOString()
     .slice(0, 10)
 
-  const { data: transactions } = await supabase
+  const { data: transactions, error } = await supabase
     .from('transactions')
     .select('id, description, amount, type, transaction_date, categories(name)')
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .gte('transaction_date', monthStart)
     .lte('transaction_date', monthEnd)
     .order('transaction_date', { ascending: false })
+
+  if (error) {
+    throw new Error(error.message)
+  }
 
   const items = (transactions ?? []) as DashboardTransaction[]
   const income = items
