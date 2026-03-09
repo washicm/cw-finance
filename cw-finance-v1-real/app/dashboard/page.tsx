@@ -8,16 +8,22 @@ type DashboardTransaction = {
   amount: number
   type: 'Entrada' | 'Saída'
   transaction_date: string
-  categories: { name: string } | null
+  categories: { name: string }[] | null
 }
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   const today = new Date()
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10)
-  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10)
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10)
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    .toISOString()
+    .slice(0, 10)
 
   const { data: transactions } = await supabase
     .from('transactions')
@@ -28,8 +34,12 @@ export default async function DashboardPage() {
     .order('transaction_date', { ascending: false })
 
   const items = (transactions ?? []) as DashboardTransaction[]
-  const income = items.filter((t) => t.type === 'Entrada').reduce((sum, t) => sum + Number(t.amount), 0)
-  const expense = items.filter((t) => t.type === 'Saída').reduce((sum, t) => sum + Number(t.amount), 0)
+  const income = items
+    .filter((t) => t.type === 'Entrada')
+    .reduce((sum, t) => sum + Number(t.amount), 0)
+  const expense = items
+    .filter((t) => t.type === 'Saída')
+    .reduce((sum, t) => sum + Number(t.amount), 0)
   const balance = income - expense
 
   return (
@@ -74,9 +84,11 @@ export default async function DashboardPage() {
                   <tr key={item.id} className="border-b border-slate-50">
                     <td className="py-4">{item.transaction_date}</td>
                     <td className="py-4">{item.description}</td>
-                    <td className="py-4">{item.categories?.name ?? '-'}</td>
+                    <td className="py-4">{item.categories?.[0]?.name ?? '-'}</td>
                     <td className="py-4">{item.type}</td>
-                    <td className="py-4 text-right">{formatCurrency(Number(item.amount))}</td>
+                    <td className="py-4 text-right">
+                      {formatCurrency(Number(item.amount))}
+                    </td>
                   </tr>
                 ))}
               </tbody>
