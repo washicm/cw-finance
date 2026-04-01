@@ -8,16 +8,22 @@ type DashboardTransaction = {
   amount: number
   type: 'Entrada' | 'Saída'
   transaction_date: string
-  categories: { name: string } | null
+  categories?: { name: string } | { name: string }[] | null
 }
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   const today = new Date()
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10)
-  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10)
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10)
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    .toISOString()
+    .slice(0, 10)
 
   const { data: transactions } = await supabase
     .from('transactions')
@@ -27,9 +33,23 @@ export default async function DashboardPage() {
     .lte('transaction_date', monthEnd)
     .order('transaction_date', { ascending: false })
 
-  const items = (transactions ?? []) as DashboardTransaction[]
-  const income = items.filter((t) => t.type === 'Entrada').reduce((sum, t) => sum + Number(t.amount), 0)
-  const expense = items.filter((t) => t.type === 'Saída').reduce((sum, t) => sum + Number(t.amount), 0)
+  const items: DashboardTransaction[] = (transactions ?? []).map((t: any) => ({
+    id: String(t.id),
+    description: String(t.description ?? ''),
+    amount: Number(t.amount ?? 0),
+    type: t.type as 'Entrada' | 'Saída',
+    transaction_date: String(t.transaction_date ?? ''),
+    categories: t.categories ?? null,
+  }))
+
+  const income = items
+    .filter((t) => t.type === 'Entrada')
+    .reduce((sum, t) => sum + Number(t.amount), 0)
+
+  const expense = items
+    .filter((t) => t.type === 'Saída')
+    .reduce((sum, t) => sum + Number(t.amount), 0)
+
   const balance = income - expense
 
   return (
@@ -70,15 +90,23 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
-                  <tr key={item.id} className="border-b border-slate-50">
-                    <td className="py-4">{item.transaction_date}</td>
-                    <td className="py-4">{item.description}</td>
-                    <td className="py-4">{item.categories?.name ?? '-'}</td>
-                    <td className="py-4">{item.type}</td>
-                    <td className="py-4 text-right">{formatCurrency(Number(item.amount))}</td>
-                  </tr>
-                ))}
+                {items.map((item) => {
+                  const categoryName = Array.isArray(item.categories)
+                    ? item.categories[0]?.name ?? '-'
+                    : item.categories?.name ?? '-'
+
+                  return (
+                    <tr key={item.id} className="border-b border-slate-50">
+                      <td className="py-4">{item.transaction_date}</td>
+                      <td className="py-4">{item.description}</td>
+                      <td className="py-4">{categoryName}</td>
+                      <td className="py-4">{item.type}</td>
+                      <td className="py-4 text-right">
+                        {formatCurrency(Number(item.amount))}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
