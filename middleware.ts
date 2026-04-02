@@ -32,7 +32,11 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup')
+  const isAuthPage =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/signup')
+
   const isPublicFile =
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
